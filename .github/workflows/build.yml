@@ -1,0 +1,122 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Windows 32-bit ──────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows (32-bit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install mingw-w64 (i686 / 32-bit)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y gcc-mingw-w64-i686
+
+      - name: Build
+        env:
+          GOOS:         windows
+          GOARCH:       386
+          CGO_ENABLED:  "1"
+          CC:           i686-w64-mingw32-gcc
+        run: |
+          go build \
+            -ldflags "-H windowsgui -s -w" \
+            -o bmw-ccid-calculator-win32.exe \
+            .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-32bit
+          path: bmw-ccid-calculator-win32.exe
+
+  # ── macOS ARM (Apple Silicon) ────────────────────────────────────────────────
+  build-macos-arm:
+    name: macOS ARM64 (Apple Silicon)
+    runs-on: macos-latest          # GitHub's latest macOS runner = ARM
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install system deps
+        run: brew install pkg-config
+
+      - name: Build
+        env:
+          GOOS:   darwin
+          GOARCH: arm64
+        run: |
+          go build \
+            -ldflags "-s -w" \
+            -o bmw-ccid-calculator-macos-arm \
+            .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: bmw-ccid-calculator-macos-arm
+
+  # ── macOS Intel (x86-64) ─────────────────────────────────────────────────────
+  build-macos-intel:
+    name: macOS Intel (x86-64)
+    runs-on: macos-13              # GitHub's Intel macOS runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install system deps
+        run: brew install pkg-config
+
+      - name: Build
+        env:
+          GOOS:   darwin
+          GOARCH: amd64
+        run: |
+          go build \
+            -ldflags "-s -w" \
+            -o bmw-ccid-calculator-macos-intel \
+            .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-amd64
+          path: bmw-ccid-calculator-macos-intel
+
+  # ── GitHub Release ───────────────────────────────────────────────────────────
+  release:
+    name: Create Release
+    needs: [build-windows, build-macos-arm, build-macos-intel]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows-32bit/bmw-ccid-calculator-win32.exe
+            artifacts/macos-arm64/bmw-ccid-calculator-macos-arm
+            artifacts/macos-amd64/bmw-ccid-calculator-macos-intel
+          generate_release_notes: true

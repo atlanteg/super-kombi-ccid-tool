@@ -1,0 +1,8 @@
+Website = "https://github.com/atlanteg/bmw-kombi-ccid-tool"
+
+[Details]
+  Name    = "BMW CC-ID Calculator"
+  ID      = "com.bmwtools.ccid-calculator"
+  Version = "1.0.0"
+  Build   = 1
+  Icon    = ""

@@ -1,0 +1,398 @@
+cc_id,description
+1,"Active Cruise Control Disabled, Poor Conditions"
+2,"Active Cruise Control Disabled, Poor Signal"
+3,Active Cruise Control Failure
+4,Trailer Parking Light Left
+5,Trailer Parking Light Right
+6,Trailer Indicator Left
+7,Trailer Indicator Right
+8,Trailer Brake Lights
+9,Trailer Fog Light
+10,ARS Roll Malfunction
+11,Steering Malfunction
+12,Dynamic Drive Failed
+13,Radio Key in Lock
+14,Door Open Front Right
+15,Door Open Front Left
+16,Door Open Rear Left
+17,Door Open Rear Right
+18,Bonnet open
+19,Boot open
+21,"Ignition Problem, Depress Brake to Start"
+22,"Starter Problem, Engine cannot Restart"
+24,DBC Dynamic Brake Control Brake Assist Failed
+25,"Preheating, Please Wait"
+26,Cruise Control Defective
+27,Engine Oil Level Low
+28,Engine Oil Level Below Minimum
+29,"Engine Problem, Power Reduced"
+30,"Engine Problem, Stop Engine"
+31,"Engine Problem, Increased Emissions"
+32,Fuel Cap Open
+33,"Engine Problem, Reduce Engine Load"
+35,DSC Failed
+36,DSC/DTC Deactivated
+38,Wrong Remote Key
+39,"Engine Overheat, Stop Engine"
+40,Press Brake to Start
+41,Service Due
+42,DSC Control System/Ride Height adjustment
+43,Dynamic Damper Control Failed
+45,Level Control System Failure
+46,Fasten Seat Belt
+48,Parking Brake
+49,Particulate Filter Malfunction
+50,Runflat Indicator Failed
+51,Parking Brake Overheated
+52,Parking Brake Failed
+53,Automatic Hold Malfunction
+54,Parking Brake Malfunction
+55,Parking Brake Active
+56,Parking Brake
+57,Parking Brake
+58,Parking Brake
+59,"Active Cruise Control Disabled, Parking Brake"
+60,Speedometer Failure
+62,Vehicle Speed Limit Exceeded
+63,Tyre Puncture
+65,"Change Key, Key Battery Low"
+66,Remote Control/Key Fault
+67,Remote Control/Key Battery Discharged
+68,Remote Key Stationary Function Battery Low
+69,"Active Cruise Control Disabled, Speed too Low"
+70,Servotronic Failed
+71,Brake Pads Worn
+73,EPS Inoperative
+74,Brake Fluid Low
+75,Trailer Electrics Failed
+76,Crash Safety Module
+78,Vehicle Speed Limit Exceeded
+79,Low External Temperature
+85,"Active Cruise Control Disabled, Hill Descent"
+87,Right Rear Light Failure
+88,Dipped Beam Left Failure
+89,Dipped Beam Right Failure
+90,Trailer Reverse Light
+91,Fasten Seat Belt
+92,Front Passenger Seat Belt Pretensioner Fault
+93,Driver’s Seat Belt Pretensioner Fault
+94,Rear Left Seat Belt Pretensioner Fault
+95,Rear Right Seat Belt Pretensioner Fault
+97,Multiple Restraint System Fault
+103,Gearbox Overheating- Drive with Care
+104,Gearbox Overheating- Reduced Output
+105,Gearbox Overheated – Stop Vehicle
+106,Rear Left Side Airbag Fault
+107,Rear Right Side Airbag Fault
+108,Driver’s Airbag Fault
+109,Passenger Airbag Fault
+111,Number Plate Light Left Failure
+113,Sidelights Switched On
+114,Rear Fog Light Failure
+115,Reverse Light Right Failure
+116,Indicator Rear Left Failure
+117,Reverse Light Left Failure
+118,Rear Light Right Failure
+119,Indicator Front Right Failure
+120,Dipped Beam Left Failure
+121,Dipped Beam Right Failure
+122,Indicator Front Right Failure
+123,Rear Light Right Failure
+124,Indicator Right Failure
+125,Indicator Rear Right Failure
+126,Fog Light Right Failure
+127,Side Indicator Left Failure
+128,Left High Beam Failure
+129,Rear Fog Light Failure
+130,Right High Beam Failure
+131,Parking Light Left Front Failure
+132,Front Right Side Light Failure
+133,Right Rear Light Failure
+134,Right Brake Light Failure
+135,Centre Brake Light Failure
+136,Left Brake Light Failure
+137,Number Plate Light Right Failure
+138,Fog Light Left Failure
+139,Front Left Tyre Pressure
+140,Rear Right Tyre Pressure
+141,Rear Left Tyre Pressure
+142,Check Tyre Pressures
+143,Front Right Tyre Pressure
+144,Tyre Pressure Monitoring Fault
+145,Tyre Pressure Monitoring Deactivated
+147,Tyre Puncture Detected
+148,Brake Light Control Failed
+149,Tyre Pressure Monitoring Failure
+158,"Active Cruise Control Disabled, Sensor Error"
+164,Windscreen Washer Fluid Low
+165,Low External Temperature
+166,Engine Coolant Level Low
+167,Reset Clock
+168,Transmission Malfunction
+169,Transmission Position N
+170,Transmission Malfunction Reset
+171,Transmission Failsafe Active
+172,Transmission Malfunction
+173,Transmission Position D Only
+174,Transmission Position P Only
+175,"Transmission Malfunction, Position P"
+176,"Active Cruise Control Disabled, Sensor Error"
+177,Active Cruise Control Malfunction
+178,"Transmission in Neutral, Engage Parking Brake"
+179,Transmission Malfunction
+180,Dynamic Damper Control Fault
+181,System Check Failed
+182,Oil Level Sensor Malfunction
+183,Windscreen Wiper Malfunction
+184,Dynamic Traction Control Active
+185,Gear Indicator Failed
+186,ELV Steering Lock Fault. Engine cannot be restarted
+187,ELV Steering Lock Active. Move Steering Wheel to Restart
+192,"Tyre Pressure Monitoring Deactivated, System Initialising"
+195,Park Distance Control Failure
+196,Indicator Front Right Failure
+197,Indicator Front Left Failure
+199,Cruise Control Failed
+201,Automatic Hold Disabled
+203,Transmission Position in N
+204,Dynamic Drive Disabled
+205,Remote Key not Present
+206,Engine Start on next Press
+207,"Central Electronics Failure, Stop Vehicle"
+208,Comfort Access Deactivated
+209,"Remote Key in Vehicle, Locking not possible"
+210,Parking Brake Failed
+211,Parking Brake Failed
+212,"Engine Oil Pressure, Stop Engine"
+213,Battery Not Charged
+215,Dynamic Stability Control
+216,Fuel Pump Fault
+217,No Remote Control
+220,Battery Discharge Rate High
+229,Battery Charge Low
+231,Light System Failure
+236,Brake and Stability Systems Failure
+237,Stability Systems Failure
+238,"Active Cruise Control Disabled, Hill Descent"
+239,Parking Brake Failed
+240,Parking Brake Failed
+241,Parking Brake Failed
+242,Parking Brake Failed
+243,Parking Brake Failed
+245,Level Control System Failure
+246,"Active Cruise Control Disabled, Speed too Low"
+247,Battery Monitoring Failed
+248,"Brake Signal Malfunction, Gears May Be Selected Without Brake"
+250,"Brake Signal Malfunction, Gears May Be Selected Without Brake"
+251,Transmission Position P
+252,Transmission Malfunction
+253,Parking Brake Failed
+254,Transmission Malfunction Emergency Program
+255,"Malfunction R,N,D Only With Engine Running"
+256,Headlight Leveling System Failure
+257,"Engine Temperature Too High, Drive Moderately"
+259,Window Anti-Trap Deactivated
+260,Sunroof Anti-Trap Deactivated
+261,Window Anti-Trap Failure
+262,Sunroof Anti-Trap Failure
+265,"Check Tyre Pressures, Mismatch"
+266,Rollover Protection Malfunction
+267,Rear Window Drive
+268,Luggage Compartment Position
+270,Convertible Top Not Locked
+271,"Convertible Top, Vehicle Speed"
+272,Convertible Top Failure
+273,Active Steering Fault
+275,Low Fuel
+276,Engine Speed Too High
+277,"Active Cruise Control Disabled, Gear Selection"
+278,Engine Speed Too Low
+279,Driver’s Seat Insecure
+280,Passenger’s Seat Insecure
+281,Service Due
+282,Instrument Cluster
+283,Instrument Cluster
+284,Service Overdue
+285,Service OK
+286,Fuel Low / Range
+287,Clutch Overheated
+288,"Transmission Malfunction, Failsafe Activated"
+289,"Transmission Malfunction, Failsafe Activated"
+290,"Transmission Malfunction, Journey May Be Continued With Care"
+291,"Transmission Malfunction, Failsafe Activated"
+292,"Transmission Malfunction, Re-Select Gear"
+293,Press Brake and Select Neutral to Start
+295,Adaptive Cornering Lights Failure
+296,"SOS Deactivated, Check Phone"
+297,BMW Assist Deactivated
+298,BMW Assist Not Possible
+299,SOS Call System Failure
+300,"BMW Assist Deactivated, Check SIM."
+301,Seatback Monitoring Failed
+302,Park Not Engaged
+303,Depress Clutch to Start
+304,Check Battery Condition
+305,Check Battery Terminals
+306,Battery Charge Low
+307,"Transmission Malfunction, Multiple Failures"
+308,Parking Brake Applied
+309,Fuel Pump Malfunction
+321,Active Steering Deactivated
+322,Transmission Teach-in Active
+323,Clutch Teach-in Active
+325,Transmission in Neutral
+326,Transmission in Drive
+327,"Tyre Pressure Monitoring Deactivated, System Initialising"
+328,Brake Pad Wear Sensor
+330,Hill Decent Control not Available
+331,Hill Decent Control Active
+332,Hill Decent Control Deactivated
+333,Hill Decent Control not Possible
+334,Run Flat System Requires Standardisation
+335,Ignition Switched On
+336,Dynamic Stability Control
+337,Dynamic Cruise Control Failure
+338,"Dynamic Cruise Control Deactivated, Parking Brake"
+339,"Dynamic Cruise Control Deactivated, Excessive Braking"
+340,"Dynamic Cruise Control Deactivated, Poor Conditions"
+341,"Dynamic Cruise Control Deactivated, Gear Selection"
+342,"Dynamic Cruise Control Deactivated, Speed Too Low"
+345,Brake/Tail Light Failure Right
+346,Brake/Tail Light Failure Left
+347,Position R/N/D Not Possible
+348,Engage Park Before Leaving Vehicle
+349,Engage Park Before Switching Ignition Off
+350,4X4 System Failure
+351,4X4 and DSC Failure
+352,Brakes Too Hot
+353,Brakes Overheated
+354,Start Assist Inactive
+356,Night Vision Failure
+363,Transmission Overload
+364,RPA Initialisation
+365,Transmission Failsafe
+366,"Transmission Fault, Failsafe"
+367,Engine Temperature Too High
+368,Transmission Failsafe Active
+369,"4X4, DSC and ABS Failure"
+370,"4X4, DSC, ABS and EBV Failure"
+371,Number Plate Light Failure
+372,Brake Force Display Light Failure Left
+373,Brake Force Display Light Failure Right
+374,Main Beam Assist Defective
+375,Main Beam Assist Not Active
+376,Main Beam Assist Not Active
+377,Main Beam Assist Sensativity
+378,Sidelight/Daytime Lights Defective- Left
+379,Sidelight/Daytime Lights Defective- Right
+380,Turn Signal Lights Defective- Left
+381,Turn Signal Lights Defective- Right
+382,"DSC Restricted, Brake Pressure Sensor"
+384,DSC Puncture Detected
+385,Steering Assistance Failed
+389,Fasten Driver’s Seat Belt
+390,Fasten Passenger’s Seat Belt
+391,Multiple Restraint System
+392,Fasten Seat Belt
+393,Gear Selector Position
+394,Gear Selector Lever
+395,Parking Brake Malfunction
+398,Engine Bay Cover Open
+399,SMG State Undetermined
+400,Engine Oil Level High
+401,Roof Mechanism Failure
+402,Apply Foot Brake
+403,Trailer Rear Light/Numberplate Light
+404,Trailer Left Indicator/Brake Light
+405,Trailer Right Indicator/Brake Light
+406,Trailer Electric Brake Failed
+410,Parking Brake Malfunction
+413,Steering Column Unlocked
+415,Battery Discharge Rate High
+416,Luggage Compartment Partition
+419,Drive Malfunction
+420,Transmission Malfunction
+422,Luggage Compartment Lower Lid
+423,Trailer Coupling Lock
+424,Reversing Camera Soiled
+425,Reversing Camera Failure
+427,Engine Oil Pressure Low
+428,Side Camera Defective
+430,Transport Mode Active
+431,Brake Loading Too High
+432,Roof Drive Overload
+434,Seat Calibration Required
+435,Lane Departure Warning Fault
+436,Seat Position Detection Fault
+437,Parking Lights On
+439,Parking Brake Overload
+441,Cruise Control Deactivated
+442,Vehicle may Roll Away
+443,Vehicle Rolling Away
+445,Vehicle Not Level
+446,Launch Control
+448,Fuel Filter
+449,Trailer Coupling Electrics Failed
+450,Automatic Start Deactivated
+452,Release Autohold
+453,Cruise Control Short Range Sensors Disabled
+454,Cruise Control Short Range Sensors Soiled
+465,Parking Brake Failure
+467,Gear Selector Malfunction/Locking
+469,"Cruise Control Deactivated, Sensors Soiled"
+474,Driving Performance Control Failed
+478,"Cruise Control Deactivated, Radio Astronomy Intervention"
+480,Parking Brake Malfunction
+481,Parking Brake Malfunction
+482,Parking Brake Failure
+483,Active Cruise Control Temporarily Disabled
+490,"Parking Assist Failure, Parking Assist Aborted"
+492,AdBlue Reserve Low
+493,AdBlue Reserve Empty
+506,AdBlue Fluid Incorrect
+516,Roof Operation Cancelled
+518,Convertible Top Not Locked
+519,Roof Operation Not Possible
+538,Gearbox Malfunction
+539,Gearbox Malfunction 5-7
+540,Gearbox Malfunction P
+541,Gearbox Malfunction Manually Release Parking Lock
+557,"Rolling Possible, Secure Vehicle"
+558,Roof Position Detection
+559,Roof Drive Overheated
+560,Roof Operation Not Possible
+561,Roof Emergency Operation
+562,Roof Unlocked
+565,Gearbox Position P only Available when Stationary
+569,"Drive Malfunction, Stop"
+570,Drive Range Low
+571,"Drive, Only Forward Crawling Speed is Possible"
+572,"Drive, Only Forward and Reverse Crawling Speed is Possible"
+573,Gearbox Malfunction
+574,No Braking Energy Reclamation
+575,Refueling- Wait
+576,Refueling Only Possible When Standing
+577,Refueling Possible
+578,Fuel Filler Flap Open
+579,Fuel System Malfunction
+584,Transport Mode Active
+585,High Voltage System Malfunction
+586,High Voltage System Malfunction
+587,High Voltage Battery Low
+588,"High Voltage Battery, Switch Ignition on to Charge"
+589,High Voltage Battery Charging
+590,Vehicle Ready
+591,High Voltage Battery Charging Aborted
+601,Braking System Malfunction
+602,Braking System Malfunction
+603,Braking System Sensor Malfunction
+604,Braking System Failure
+606,High Voltage Battery Output Restricted
+607,High Voltage Battery Regeneration Required
+608,"Tyre Pressure, Front Left"
+609,"Tyre Pressure, Front Right"
+610,"Tyre Pressure, Rear Right"
+611,"Tyre Pressure, Rear Left"
+612,MRS Acceleration Sensors
+811,Bonnet Open
+999,Instrument Cluster Fault

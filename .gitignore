@@ -1,0 +1,12 @@
+# Binaries
+bmw-kombi-ccid-tool
+bmw-ccid-calculator
+bmw-ccid-calculator-*
+*.exe
+
+# Go
+*.test
+*.out
+
+# macOS
+.DS_Store
