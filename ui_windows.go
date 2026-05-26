@@ -12,6 +12,9 @@ import (
 	. "github.com/lxn/walk/declarative"
 )
 
+// "Read from Car" section constants
+const defaultVCIHost = "169.254.138.176"
+
 type winApp struct {
 	mw          *walk.MainWindow
 	lbAvailable *walk.ListBox
@@ -20,6 +23,11 @@ type winApp struct {
 	lblStatus   *walk.Label
 	teHex       *walk.TextEdit
 	teResults   *walk.TextEdit
+
+	// "Read from Car" section
+	leVCIHost  *walk.LineEdit
+	teLiveRes  *walk.TextEdit
+	lblLive    *walk.Label
 
 	allEntries  []CCIDEntry
 	filtered    []CCIDEntry
@@ -155,6 +163,42 @@ func run() {
 								AssignTo: &wa.teResults,
 								ReadOnly: true,
 								MinSize:  Size{Height: 130},
+							},
+						},
+					},
+
+					// ── Read from Car ─────────────────────────────────────────
+					GroupBox{
+						Title:  "Read CC-IDs from Connected Car (EDIABAS/TCP)",
+						Layout: VBox{},
+						Children: []Widget{
+							Label{
+								Text: "Enter the IP address of your BMW VCI adapter (link-local, port 6801).\n" +
+									"The car must be ignition-on and the OBD cable plugged in.",
+							},
+							Composite{
+								Layout: HBox{},
+								Children: []Widget{
+									Label{Text: "VCI IP:"},
+									LineEdit{
+										AssignTo: &wa.leVCIHost,
+										Text:     defaultVCIHost,
+										MinSize:  Size{Width: 140},
+									},
+									PushButton{
+										Text:      "Read from Car",
+										OnClicked: func() { wa.readFromCar() },
+									},
+									Label{
+										AssignTo: &wa.lblLive,
+										Text:     "",
+									},
+								},
+							},
+							TextEdit{
+								AssignTo: &wa.teLiveRes,
+								ReadOnly: true,
+								MinSize:  Size{Height: 150},
 							},
 						},
 					},
@@ -447,6 +491,43 @@ func (a *winApp) copyResults() {
 		return
 	}
 	walk.Clipboard().SetText(text)
+}
+
+// ── Read from Car ─────────────────────────────────────────────────────────────
+
+func (a *winApp) readFromCar() {
+	host := strings.TrimSpace(a.leVCIHost.Text())
+	if host == "" {
+		walk.MsgBox(a.mw, "No IP", "Enter the VCI IP address.", walk.MsgBoxIconWarning)
+		return
+	}
+	a.lblLive.SetText("Connecting…")
+	a.teLiveRes.SetText("")
+
+	go func() {
+		ccids, err := ReadVehicleCCIDs(host)
+
+		a.mw.Synchronize(func() {
+			if err != nil {
+				a.lblLive.SetText("Error")
+				walk.MsgBox(a.mw, "Connection Error", err.Error(), walk.MsgBoxIconError)
+				return
+			}
+			if len(ccids) == 0 {
+				a.lblLive.SetText("0 CC-IDs found")
+				a.teLiveRes.SetText("No active CC-IDs reported by the cluster.")
+				return
+			}
+
+			a.lblLive.SetText(fmt.Sprintf("%d CC-IDs found", len(ccids)))
+			var sb strings.Builder
+			sb.WriteString(fmt.Sprintf("Found %d stored CC-IDs:\n\n", len(ccids)))
+			for _, c := range ccids {
+				sb.WriteString(fmt.Sprintf("CC-ID %4d  %s\n", c.ID, c.Description))
+			}
+			a.teLiveRes.SetText(strings.TrimRight(sb.String(), "\n"))
+		})
+	}()
 }
 
 // ── shared helper (also in ui_darwin.go) ─────────────────────────────────────

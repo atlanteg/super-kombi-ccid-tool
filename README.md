@@ -68,6 +68,29 @@ CC_ID,TITLE_ENGB,LONGTEXT_ENGB,...
 
 The parser accepts the full multi-language BMW format (with `TITLE_ENUS`, `TITLE_DEDE`, etc.) and automatically falls back to `TITLE_ENUS` when `TITLE_ENGB` is missing.
 
+## Read CC-IDs from a Connected Car
+
+The tool can query the instrument cluster directly over the EDIABAS/TCP interface exposed by BMW VCI adapters (ISTA-compatible dongles).
+
+**Requirements:**
+- BMW VCI adapter connected via OBD-II (e.g. ICOM, ENET cable with ISTA)
+- Car ignition ON
+- VCI reachable on the link-local network (typically `169.254.x.x`, port **6801**)
+
+**Windows:** enter the VCI IP in the "Read CC-IDs from Connected Car" section and click **Read from Car**.
+
+**macOS:** click **🔌 Read from Car…** on Step 1, enter the VCI IP, press **Connect & Read**.
+
+The app sends a UDS `ReadDataByIdentifier` (service `0x22`, DID `0xD10B`) to the Kombi ECU (address `0x60`) wrapped in the EDIABAS/AIFC TCP framing observed in traffic captures, then looks up each returned CC-ID in the embedded database and displays it with its description.
+
+**Protocol (for reference):**
+```
+Frame:   [4B length (BE)][2B type: 0001=data / 0002=ack][payload]
+Request payload:  F4 60 22 D1 0B
+Response payload: 60 F4 62 D1 0B [4-byte records...]
+Record:  [CC_ID_HI][CC_ID_LO][FLAG1][FLAG2] — zero record = end of list
+```
+
 ## Build
 
 **macOS (native, current machine):**

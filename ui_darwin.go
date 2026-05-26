@@ -16,6 +16,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+const defaultVCIHost = "169.254.138.176"
+
 type ccidApp struct {
 	fyneApp fyne.App
 	win     fyne.Window
@@ -145,6 +147,10 @@ func (a *ccidApp) showStep1() {
 	})
 	clearBtn.Importance = widget.LowImportance
 
+	readCarBtn := widget.NewButton("🔌 Read from Car…", func() {
+		a.showReadFromCar()
+	})
+
 	nextBtn := widget.NewButton("Next: Enter Hex Values →", func() {
 		if len(a.selectedIDs) == 0 {
 			dialog.ShowInformation("Nothing selected", "Please select at least one CC-ID.", a.win)
@@ -158,9 +164,13 @@ func (a *ccidApp) showStep1() {
 		"Step 1 of 3 — Select CC-IDs to Activate",
 		fyne.TextAlignCenter, fyne.TextStyle{Bold: true},
 	)
+	bottomBar := container.NewBorder(nil, nil,
+		container.NewHBox(clearBtn, readCarBtn),
+		nextBtn,
+	)
 	a.win.SetContent(container.NewBorder(
 		container.NewVBox(title, widget.NewSeparator()),
-		container.NewVBox(widget.NewSeparator(), container.NewBorder(nil, nil, clearBtn, nextBtn)),
+		container.NewVBox(widget.NewSeparator(), bottomBar),
 		nil, nil, split,
 	))
 }
@@ -370,6 +380,86 @@ func (a *ccidApp) showStep3(results []*GroupResult) {
 		container.NewVBox(widget.NewSeparator(), container.NewBorder(nil, nil, startOverBtn, copyAllBtn)),
 		nil, nil,
 		container.NewScroll(content),
+	))
+}
+
+// ── Read from Car ─────────────────────────────────────────────────────────────
+
+func (a *ccidApp) showReadFromCar() {
+	ipEntry := widget.NewEntry()
+	ipEntry.SetText(defaultVCIHost)
+	ipEntry.SetPlaceHolder("169.254.x.x")
+
+	statusLbl := widget.NewLabel("Enter the VCI IP address and press Connect.")
+	statusLbl.Wrapping = fyne.TextWrapWord
+
+	resultList := widget.NewList(
+		func() int { return 0 },
+		func() fyne.CanvasObject { return widget.NewLabel("") },
+		func(_ widget.ListItemID, _ fyne.CanvasObject) {},
+	)
+
+	var liveResults []LiveCCID
+
+	connectBtn := widget.NewButton("Connect & Read", func() {
+		host := strings.TrimSpace(ipEntry.Text)
+		if host == "" {
+			statusLbl.SetText("Please enter the VCI IP address.")
+			return
+		}
+		statusLbl.SetText("Connecting to " + host + ":6801 …")
+		go func() {
+			ccids, err := ReadVehicleCCIDs(host)
+			if err != nil {
+				statusLbl.SetText("Error: " + err.Error())
+				return
+			}
+			liveResults = ccids
+			resultList.Length = func() int { return len(liveResults) }
+			resultList.CreateItem = func() fyne.CanvasObject {
+				return container.NewBorder(nil, nil,
+					widget.NewLabelWithStyle("0000", fyne.TextAlignLeading, fyne.TextStyle{Monospace: true}),
+					nil,
+					widget.NewLabel("description"),
+				)
+			}
+			resultList.UpdateItem = func(id widget.ListItemID, obj fyne.CanvasObject) {
+				if id >= len(liveResults) {
+					return
+				}
+				c := obj.(*fyne.Container)
+				c.Objects[0].(*widget.Label).SetText(fmt.Sprintf("%4d", liveResults[id].ID))
+				c.Objects[1].(*widget.Label).SetText(liveResults[id].Description)
+			}
+			if len(ccids) == 0 {
+				statusLbl.SetText("Connected — no active CC-IDs found.")
+			} else {
+				statusLbl.SetText(fmt.Sprintf("Found %d stored CC-ID(s):", len(ccids)))
+			}
+			resultList.Refresh()
+		}()
+	})
+	connectBtn.Importance = widget.HighImportance
+
+	backBtn := widget.NewButton("← Back", func() { a.showStep1() })
+
+	title := widget.NewLabelWithStyle(
+		"Read CC-IDs from Connected Car",
+		fyne.TextAlignCenter, fyne.TextStyle{Bold: true},
+	)
+	hint := widget.NewLabel(
+		"Requires BMW VCI (ISTA-compatible) connected via OBD-II.\n" +
+			"Car ignition must be ON. Uses EDIABAS TCP port 6801.",
+	)
+	hint.Wrapping = fyne.TextWrapWord
+
+	topRow := container.NewBorder(nil, nil, widget.NewLabel("VCI IP:"), connectBtn, ipEntry)
+
+	a.win.SetContent(container.NewBorder(
+		container.NewVBox(title, widget.NewSeparator(), hint, topRow, widget.NewSeparator(), statusLbl),
+		container.NewVBox(widget.NewSeparator(), container.NewBorder(nil, nil, backBtn, nil)),
+		nil, nil,
+		container.NewScroll(resultList),
 	))
 }
 
