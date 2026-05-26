@@ -34,23 +34,23 @@ type ghAsset struct {
 }
 
 // checkAndUpdate runs in a goroutine.
-// Strategy: while the process is still running, rename the current exe
-// out of the way (Windows allows renaming a running exe via FILE_SHARE_DELETE),
-// move the downloaded exe into its place, start it, then exit.
-// No batch scripts, no timing hacks.
+//
+// Update flow (no file-lock fighting):
+//  1. Download new exe to %TEMP%\kombi-ccid-update.exe
+//  2. Launch it with --install-to <currentExePath>
+//  3. os.Exit(0) — old process exits, releasing the file lock immediately
+//  4. The new process (in temp) sleeps 2 s, copies itself to currentExePath, starts it
+//
+// The installer phase runs silently (no window) and exits after starting the
+// real installed version.
 func checkAndUpdate(mw *walk.MainWindow) {
 	if version == "dev" {
 		return
 	}
 
-	// On startup: clean up any leftover .bak from a previous update.
-	if exe, err := os.Executable(); err == nil {
-		_ = os.Remove(exe + ".bak")
-	}
-
 	rel, err := fetchRelease()
 	if err != nil || rel == nil {
-		return // network unavailable — silent fail
+		return
 	}
 	if !versionNewer(rel.TagName, version) {
 		return
@@ -72,7 +72,7 @@ func checkAndUpdate(mw *walk.MainWindow) {
 	mw.Synchronize(func() {
 		res := walk.MsgBox(mw,
 			"Update Available",
-			fmt.Sprintf("Version %s is available (you have %s).\n\nDownload and restart now?",
+			fmt.Sprintf("Version %s is available (you have %s).\n\nDownload and install now?",
 				rel.TagName, version),
 			walk.MsgBoxYesNo|walk.MsgBoxIconInformation,
 		)
@@ -82,66 +82,42 @@ func checkAndUpdate(mw *walk.MainWindow) {
 		return
 	}
 
-	// Resolve real exe path (follow symlinks, etc.)
+	// Resolve where we are installed.
 	exePath, err := os.Executable()
 	if err != nil {
 		showUpdateError(mw, "Cannot locate executable:\n"+err.Error())
 		return
 	}
 	exePath, _ = filepath.EvalSymlinks(exePath)
-	newExePath := exePath + ".new"
-	bakPath := exePath + ".bak"
 
-	// Download new exe into the same directory.
+	// Download into %TEMP% — always writable, no conflict with the running exe.
+	tmpPath := filepath.Join(os.TempDir(), "kombi-ccid-update.exe")
+	_ = os.Remove(tmpPath) // clear any leftover
+
 	mw.Synchronize(func() {
 		mw.SetTitle("BMW Kombi CC-ID Calculator — downloading update…")
 	})
-	if err := downloadFile(downloadURL, newExePath); err != nil {
-		_ = os.Remove(newExePath)
+
+	if err := downloadFile(downloadURL, tmpPath); err != nil {
 		mw.Synchronize(func() { mw.SetTitle("BMW Kombi CC-ID Calculator " + version) })
+		_ = os.Remove(tmpPath)
 		showUpdateError(mw, "Download failed:\n"+err.Error())
 		return
 	}
 
-	// ── Atomic swap (all os.Rename calls stay within the same directory) ──────
-	//
-	// 1. Rename running exe → .bak   (allowed while running on Windows 7+)
-	_ = os.Remove(bakPath) // clear any leftover
-	if err := os.Rename(exePath, bakPath); err != nil {
-		_ = os.Remove(newExePath)
-		mw.Synchronize(func() { mw.SetTitle("BMW Kombi CC-ID Calculator " + version) })
-		showUpdateError(mw,
-			"Cannot move the current executable.\n"+
-				"Make sure the app is in a folder you have write access to.\n\n"+
-				err.Error())
-		return
-	}
-
-	// 2. Move downloaded exe → final path
-	if err := os.Rename(newExePath, exePath); err != nil {
-		// Restore original
-		_ = os.Rename(bakPath, exePath)
-		_ = os.Remove(newExePath)
-		mw.Synchronize(func() { mw.SetTitle("BMW Kombi CC-ID Calculator " + version) })
-		showUpdateError(mw, "Cannot install update:\n"+err.Error())
-		return
-	}
-
-	// 3. Start the new version.
-	cmd := exec.Command(exePath)
+	// Launch the downloaded exe in "installer" mode.
+	// It will wait for us to exit (file lock released), then copy itself to exePath
+	// and start the installed version.
+	cmd := exec.Command(tmpPath, "--install-to", exePath)
 	if err := cmd.Start(); err != nil {
-		// Undo swap
-		_ = os.Rename(exePath, newExePath)
-		_ = os.Rename(bakPath, exePath)
+		_ = os.Remove(tmpPath)
 		mw.Synchronize(func() { mw.SetTitle("BMW Kombi CC-ID Calculator " + version) })
-		showUpdateError(mw, "Cannot start updated version:\n"+err.Error())
+		showUpdateError(mw, "Cannot launch installer:\n"+err.Error())
 		return
 	}
 
-	// 4. Best-effort: delete backup (new process also attempts this on startup).
-	_ = os.Remove(bakPath)
-
-	// 5. Exit — the new version is already running.
+	// Exit — our file lock on exePath is released immediately.
+	// The installer process takes it from here.
 	os.Exit(0)
 }
 
@@ -191,7 +167,6 @@ func downloadFile(url, dest string) error {
 	return err
 }
 
-// versionNewer returns true when latest > current (semver comparison).
 func versionNewer(latest, current string) bool {
 	l, c := parseVer(latest), parseVer(current)
 	for i := range l {
