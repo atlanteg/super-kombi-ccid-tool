@@ -18,17 +18,17 @@ type winApp struct {
 	mw *walk.MainWindow
 	tw *walk.TabWidget
 
-	// Tab 1 — Select CC-IDs
+	// Tab 2 — Select CC-IDs
 	lbAvailable *walk.ListBox
 	lbSelected  *walk.ListBox
 	leSearch    *walk.LineEdit
 	lblStatus   *walk.Label
 
-	// Tab 2 — Calculate Mask
+	// Tab 3 — Calculate Mask
 	teHex     *walk.TextEdit
 	teResults *walk.TextEdit
 
-	// Tab 3 — Read from Car
+	// Tab 1 — Read from Car
 	leVCIHost *walk.LineEdit
 	lblLive   *walk.Label
 	lbLive    *walk.ListBox
@@ -65,7 +65,62 @@ func run() {
 				Pages: []TabPage{
 
 					// ══════════════════════════════════════════════════════
-					// Tab 1 — Select CC-IDs
+					// Tab 1 — Read from Car
+					// ══════════════════════════════════════════════════════
+					{
+						Title:  "  Read from Car  ",
+						Layout: VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}},
+						Children: []Widget{
+
+							Label{Text: "Reads stored CC-IDs from the instrument cluster via EDIABAS/TCP (port 6801)."},
+							Label{Text: "Requirements: BMW VCI adapter connected via OBD-II cable, ignition ON."},
+
+							// IP + connect row
+							Composite{
+								Layout: HBox{MarginsZero: true},
+								Children: []Widget{
+									Label{Text: "VCI IP address:"},
+									LineEdit{
+										AssignTo: &wa.leVCIHost,
+										Text:     defaultVCIHost,
+										MaxSize:  Size{Width: 160},
+									},
+									PushButton{
+										Text:      "Read from Car",
+										OnClicked: func() { wa.readFromCar() },
+									},
+									Label{AssignTo: &wa.lblLive, Text: ""},
+								},
+							},
+
+							// Live CC-ID list
+							Label{Text: "CC-IDs stored in cluster  (double-click → add to Selected)"},
+							ListBox{
+								AssignTo:        &wa.lbLive,
+								OnItemActivated: func() { wa.addFromCar() },
+							},
+
+							// Bottom buttons
+							Composite{
+								Layout: HBox{MarginsZero: true},
+								Children: []Widget{
+									PushButton{
+										Text:      "Add All to Selected",
+										OnClicked: func() { wa.addAllFromCar() },
+									},
+									HSpacer{},
+									PushButton{
+										Text: "→ Go to Select CC-IDs tab",
+										OnClicked: func() {
+											wa.tw.SetCurrentIndex(1)
+										},
+									},
+								},
+							},
+						},
+					},
+					// ══════════════════════════════════════════════════════
+					// Tab 2 — Select CC-IDs
 					// ══════════════════════════════════════════════════════
 					{
 						Title:  "  Select CC-IDs  ",
@@ -123,13 +178,19 @@ func run() {
 										wa.refreshLists()
 										wa.refreshHexTemplate()
 									}},
+									PushButton{
+										Text: "→ Go to Calculate Mask tab",
+										OnClicked: func() {
+											wa.tw.SetCurrentIndex(2)
+										},
+									},
 								},
 							},
 						},
 					},
 
 					// ══════════════════════════════════════════════════════
-					// Tab 2 — Calculate Mask
+					// Tab 3 — Calculate Mask
 					// ══════════════════════════════════════════════════════
 					{
 						Title:  "  Calculate Mask  ",
@@ -187,61 +248,6 @@ func run() {
 						},
 					},
 
-					// ══════════════════════════════════════════════════════
-					// Tab 3 — Read from Car
-					// ══════════════════════════════════════════════════════
-					{
-						Title:  "  Read from Car  ",
-						Layout: VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}},
-						Children: []Widget{
-
-							Label{Text: "Reads stored CC-IDs from the instrument cluster via EDIABAS/TCP (port 6801)."},
-							Label{Text: "Requirements: BMW VCI adapter connected via OBD-II cable, ignition ON."},
-
-							// IP + connect row
-							Composite{
-								Layout: HBox{MarginsZero: true},
-								Children: []Widget{
-									Label{Text: "VCI IP address:"},
-									LineEdit{
-										AssignTo: &wa.leVCIHost,
-										Text:     defaultVCIHost,
-										MaxSize:  Size{Width: 160},
-									},
-									PushButton{
-										Text:      "Read from Car",
-										OnClicked: func() { wa.readFromCar() },
-									},
-									Label{AssignTo: &wa.lblLive, Text: ""},
-								},
-							},
-
-							// Live CC-ID list
-							Label{Text: "CC-IDs stored in cluster  (double-click → add to Selected)"},
-							ListBox{
-								AssignTo:        &wa.lbLive,
-								OnItemActivated: func() { wa.addFromCar() },
-							},
-
-							// Bottom buttons
-							Composite{
-								Layout: HBox{MarginsZero: true},
-								Children: []Widget{
-									PushButton{
-										Text:      "Add All to Selected",
-										OnClicked: func() { wa.addAllFromCar() },
-									},
-									HSpacer{},
-									PushButton{
-										Text: "→ Go to Select tab",
-										OnClicked: func() {
-											wa.tw.SetCurrentIndex(0)
-										},
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 		},
@@ -254,7 +260,7 @@ func run() {
 	wa.mw.Run()
 }
 
-// ── Tab 1: CC-ID list helpers ─────────────────────────────────────────────────
+// ── Tab 2: CC-ID list helpers ─────────────────────────────────────────────────
 
 func (a *winApp) applyFilter() {
 	q := strings.ToLower(strings.TrimSpace(a.leSearch.Text()))
@@ -328,7 +334,7 @@ func (a *winApp) getSelected() []CCIDEntry {
 	return entries
 }
 
-// ── Tab 2: Hex template & calculation ────────────────────────────────────────
+// ── Tab 3: Hex template & calculation ────────────────────────────────────────
 
 func (a *winApp) refreshHexTemplate() {
 	existing := a.parseHexText()
@@ -523,7 +529,7 @@ func (a *winApp) copyResults() {
 	walk.Clipboard().SetText(text)
 }
 
-// ── Tab 3: Read from Car ──────────────────────────────────────────────────────
+// ── Tab 1: Read from Car ──────────────────────────────────────────────────────
 
 func (a *winApp) readFromCar() {
 	host := strings.TrimSpace(a.leVCIHost.Text())
@@ -576,7 +582,7 @@ func (a *winApp) addFromCar() {
 	a.lblLive.SetText(fmt.Sprintf("Added CC-ID %d — %d selected total", c.ID, len(a.selectedIDs)))
 }
 
-// addAllFromCar adds every CC-ID returned from the car and switches to Tab 1.
+// addAllFromCar adds every CC-ID returned from the car and switches to Tab 2.
 func (a *winApp) addAllFromCar() {
 	if len(a.liveCCIDs) == 0 {
 		walk.MsgBox(a.mw, "Nothing to add",
@@ -591,7 +597,7 @@ func (a *winApp) addAllFromCar() {
 	a.refreshLiveList()
 	a.lblLive.SetText(fmt.Sprintf("All %d CC-IDs added (%d selected total)",
 		len(a.liveCCIDs), len(a.selectedIDs)))
-	a.tw.SetCurrentIndex(0) // jump to Select tab
+	a.tw.SetCurrentIndex(1) // jump to Select tab
 }
 
 // refreshLiveList redraws the live ListBox with updated checkmarks.
