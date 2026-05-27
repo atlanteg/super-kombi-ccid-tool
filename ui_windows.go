@@ -141,10 +141,8 @@ func run() {
 								Title:  "Current hex values from CAFD  (default FF = all masked)",
 								Layout: VBox{},
 								Children: []Widget{
-									Label{
-										Text: "One line per group:  GROUP_N: XX XX XX XX XX XX XX XX\n" +
-											"Lines starting with # are comments.",
-									},
+									Label{Text: "One line per group:  GROUP_N: XX XX XX XX XX XX XX XX"},
+									Label{Text: "Lines starting with # are comments."},
 									Composite{
 										Layout: HBox{MarginsZero: true},
 										Children: []Widget{
@@ -197,10 +195,8 @@ func run() {
 						Layout: VBox{Margins: Margins{Left: 8, Top: 8, Right: 8, Bottom: 8}},
 						Children: []Widget{
 
-							Label{
-								Text: "Reads stored CC-IDs from the instrument cluster via EDIABAS/TCP (port 6801).\n" +
-									"Requirements: BMW VCI adapter connected via OBD-II cable, ignition ON.",
-							},
+							Label{Text: "Reads stored CC-IDs from the instrument cluster via EDIABAS/TCP (port 6801)."},
+							Label{Text: "Requirements: BMW VCI adapter connected via OBD-II cable, ignition ON."},
 
 							// IP + connect row
 							Composite{
