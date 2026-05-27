@@ -35,14 +35,15 @@ type ghAsset struct {
 
 // checkAndUpdate runs in a goroutine.
 //
-// Update flow (no file-lock fighting):
+// Update flow:
 //  1. Download new exe to %TEMP%\kombi-ccid-update.exe
-//  2. Launch it with --install-to <currentExePath>
-//  3. os.Exit(0) — old process exits, releasing the file lock immediately
-//  4. The new process (in temp) sleeps 2 s, copies itself to currentExePath, starts it
+//  2. Launch powershell.exe (trusted system process, not blocked by SmartScreen)
+//     which waits 3 s, copies the download over the installed exe, then starts it.
+//  3. os.Exit(0) — old process exits, releasing the file lock immediately.
 //
-// The installer phase runs silently (no window) and exits after starting the
-// real installed version.
+// We intentionally do NOT exec the downloaded exe directly; running an
+// unknown exe from %TEMP% is blocked silently by Windows Defender on many
+// systems.  powershell.exe is always trusted.
 func checkAndUpdate(mw *walk.MainWindow) {
 	if version == "dev" {
 		return
@@ -105,19 +106,38 @@ func checkAndUpdate(mw *walk.MainWindow) {
 		return
 	}
 
-	// Launch the downloaded exe in "installer" mode.
-	// It will wait for us to exit (file lock released), then copy itself to exePath
-	// and start the installed version.
-	cmd := exec.Command(tmpPath, "--install-to", exePath)
+	// Hand off to PowerShell — a trusted system process that won't be blocked
+	// by SmartScreen or Defender.  It waits for our process to release the file
+	// lock, copies the download over the installed exe, then starts the new ver.
+	//
+	// Single-quoted PS strings: literal; a single-quote inside is doubled ('').
+	psq := func(s string) string {
+		return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+	}
+	psCmd := fmt.Sprintf(
+		`Start-Sleep -Seconds 3; `+
+			`try { `+
+			`  Copy-Item -LiteralPath %s -Destination %s -Force; `+
+			`  Start-Process -FilePath %s `+
+			`} catch { `+
+			`  Start-Process -FilePath %s `+
+			`}`,
+		psq(tmpPath), psq(exePath), psq(exePath), psq(tmpPath),
+	)
+
+	cmd := exec.Command("powershell.exe",
+		"-WindowStyle", "Hidden",
+		"-NonInteractive",
+		"-Command", psCmd,
+	)
 	if err := cmd.Start(); err != nil {
 		_ = os.Remove(tmpPath)
 		mw.Synchronize(func() { mw.SetTitle("BMW Kombi CC-ID Calculator " + version) })
-		showUpdateError(mw, "Cannot launch installer:\n"+err.Error())
+		showUpdateError(mw, "Cannot launch updater:\n"+err.Error())
 		return
 	}
 
-	// Exit — our file lock on exePath is released immediately.
-	// The installer process takes it from here.
+	// Exit — file lock on exePath released immediately.  PowerShell takes over.
 	os.Exit(0)
 }
 
