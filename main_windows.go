@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 )
 
@@ -24,9 +25,10 @@ func main() {
 	run()
 }
 
-// selfInstall runs from the downloaded temp location, waits for the target
-// file to become writable (old process released its lock), copies itself
-// there, then starts the installed version.
+// selfInstall runs from the downloaded temp location (invoked by older app versions
+// that still use the --install-to mechanism). It waits for the target file to become
+// writable (old process released its lock), copies itself there, then starts the
+// installed version.
 func selfInstall(targetPath string) {
 	logPath := filepath.Join(os.TempDir(), "kombi-ccid-install.log")
 	logf := func(format string, args ...any) {
@@ -46,7 +48,6 @@ func selfInstall(targetPath string) {
 	logf("selfInstall started: self=%s target=%s", self, targetPath)
 
 	// Poll until targetPath is writable (old process released the file lock).
-	// Timeout after 15 s in case something is wrong.
 	const (
 		pollInterval = 200 * time.Millisecond
 		pollTimeout  = 15 * time.Second
@@ -60,27 +61,34 @@ func selfInstall(targetPath string) {
 		}
 		if time.Now().After(deadline) {
 			logf("timeout waiting for file lock on %s", targetPath)
-			// Fall through and try the copy anyway — maybe it will work.
 			break
 		}
 		time.Sleep(pollInterval)
 	}
-	logf("file is writable, copying…")
+	logf("file writable, copying…")
 
 	if err := fileCopy(self, targetPath); err != nil {
 		logf("fileCopy error: %v — running from temp as fallback", err)
-		// Permission error or AV blocking — at least run the new version from temp.
-		if err2 := exec.Command(self).Start(); err2 != nil {
-			logf("fallback Start error: %v", err2)
-		}
+		startDetached(self)
 		os.Exit(0)
 	}
 
 	logf("copy succeeded, starting %s", targetPath)
-	if err := exec.Command(targetPath).Start(); err != nil {
-		logf("Start installed exe error: %v", err)
-	}
+	startDetached(targetPath)
 	os.Exit(0)
+}
+
+// startDetached launches exe as a fully independent process (CREATE_NEW_PROCESS_GROUP)
+// so it is not affected by the current process's Job Object or lifetime.
+func startDetached(exe string) {
+	cmd := exec.Command(exe)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: 0x00000200, // CREATE_NEW_PROCESS_GROUP
+	}
+	if err := cmd.Start(); err != nil {
+		// Last resort: plain Start without special flags.
+		exec.Command(exe).Start() //nolint
+	}
 }
 
 func fileCopy(src, dst string) error {

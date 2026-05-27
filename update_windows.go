@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/lxn/walk"
@@ -33,17 +34,25 @@ type ghAsset struct {
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
-// checkAndUpdate runs in a goroutine.
+// checkAndUpdate runs in a goroutine on startup.
 //
-// Update flow:
-//  1. Download new exe to %TEMP%\kombi-ccid-update.exe
-//  2. Launch powershell.exe (trusted system process, not blocked by SmartScreen)
-//     which waits 3 s, copies the download over the installed exe, then starts it.
-//  3. os.Exit(0) — old process exits, releasing the file lock immediately.
+// Update flow (fully automatic, no user confirmation):
+//  1. Fetch latest release from GitHub API.
+//  2. If newer — download new exe to %TEMP%\kombi-ccid-update.exe.
+//  3. Launch cmd.exe as a detached hidden process with CREATE_NEW_PROCESS_GROUP
+//     so it survives our os.Exit(0) even if we are inside a Windows Job Object.
+//     The cmd command: wait 3 s (via ping), copy new exe over current one, start it.
+//  4. os.Exit(0) — releases the file lock on the current exe immediately.
 //
-// We intentionally do NOT exec the downloaded exe directly; running an
-// unknown exe from %TEMP% is blocked silently by Windows Defender on many
-// systems.  powershell.exe is always trusted.
+// Why cmd.exe instead of PowerShell or the downloaded exe:
+//   - Running an unknown exe from %TEMP% is silently killed by Defender on most
+//     systems.
+//   - PowerShell's child process can be killed together with the parent if both are
+//     in the same Windows Job Object (common in some launcher contexts).
+//   - cmd.exe launched with CREATE_NEW_PROCESS_GROUP breaks the Job Object
+//     inheritance and survives parent exit reliably.
+//   - Since the app requires administrator (manifest), cmd.exe inherits the token
+//     and can write to any location.
 func checkAndUpdate(mw *walk.MainWindow) {
 	if version == "dev" {
 		return
@@ -68,76 +77,55 @@ func checkAndUpdate(mw *walk.MainWindow) {
 		return
 	}
 
-	// Ask user.
-	proceed := false
-	mw.Synchronize(func() {
-		res := walk.MsgBox(mw,
-			"Update Available",
-			fmt.Sprintf("Version %s is available (you have %s).\n\nDownload and install now?",
-				rel.TagName, version),
-			walk.MsgBoxYesNo|walk.MsgBoxIconInformation,
-		)
-		proceed = res == idYes
-	})
-	if !proceed {
-		return
-	}
-
-	// Resolve where we are installed.
+	// Resolve the path of the currently running executable.
 	exePath, err := os.Executable()
 	if err != nil {
-		showUpdateError(mw, "Cannot locate executable:\n"+err.Error())
 		return
 	}
 	exePath, _ = filepath.EvalSymlinks(exePath)
 
 	// Download into %TEMP% — always writable, no conflict with the running exe.
 	tmpPath := filepath.Join(os.TempDir(), "kombi-ccid-update.exe")
-	_ = os.Remove(tmpPath) // clear any leftover
+	_ = os.Remove(tmpPath)
 
 	mw.Synchronize(func() {
-		mw.SetTitle("BMW Kombi CC-ID Calculator — downloading update…")
+		mw.SetTitle(fmt.Sprintf("BMW Kombi CC-ID Calculator %s — updating to %s…", version, rel.TagName))
 	})
 
 	if err := downloadFile(downloadURL, tmpPath); err != nil {
-		mw.Synchronize(func() { mw.SetTitle("BMW Kombi CC-ID Calculator " + version) })
-		_ = os.Remove(tmpPath)
-		showUpdateError(mw, "Download failed:\n"+err.Error())
-		return
+		mw.Synchronize(func() {
+			mw.SetTitle("BMW Kombi CC-ID Calculator " + version)
+		})
+		return // silent — no error dialog for auto-update
 	}
 
-	// Hand off to PowerShell — a trusted system process that won't be blocked
-	// by SmartScreen or Defender.  It waits for our process to release the file
-	// lock, copies the download over the installed exe, then starts the new ver.
+	// Build the cmd.exe command:
+	//   ping 127.0.0.1 -n 4   → ~3 second delay (4 ICMP replies, 1 s apart)
+	//   copy /y src dst        → overwrite the installed exe
+	//   start "" dst           → launch the newly installed version
 	//
-	// Single-quoted PS strings: literal; a single-quote inside is doubled ('').
-	psq := func(s string) string {
-		return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+	// Paths are double-quoted; double-quotes are invalid in Windows paths so no
+	// extra escaping is needed.
+	installCmd := fmt.Sprintf(
+		`ping 127.0.0.1 -n 4 >NUL & copy /y "%s" "%s" & start "" "%s"`,
+		tmpPath, exePath, exePath,
+	)
+	cmd := exec.Command("cmd.exe", "/c", installCmd)
+	// CREATE_NEW_PROCESS_GROUP (0x200) + CREATE_NO_WINDOW (0x8000000):
+	// - breaks Job Object inheritance → cmd.exe survives our os.Exit(0)
+	// - no console window is shown
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: 0x00000200 | 0x08000000, // CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
 	}
-	psCmd := fmt.Sprintf(
-		`Start-Sleep -Seconds 3; `+
-			`try { `+
-			`  Copy-Item -LiteralPath %s -Destination %s -Force; `+
-			`  Start-Process -FilePath %s `+
-			`} catch { `+
-			`  Start-Process -FilePath %s `+
-			`}`,
-		psq(tmpPath), psq(exePath), psq(exePath), psq(tmpPath),
-	)
 
-	cmd := exec.Command("powershell.exe",
-		"-WindowStyle", "Hidden",
-		"-NonInteractive",
-		"-Command", psCmd,
-	)
 	if err := cmd.Start(); err != nil {
-		_ = os.Remove(tmpPath)
-		mw.Synchronize(func() { mw.SetTitle("BMW Kombi CC-ID Calculator " + version) })
-		showUpdateError(mw, "Cannot launch updater:\n"+err.Error())
+		mw.Synchronize(func() {
+			mw.SetTitle("BMW Kombi CC-ID Calculator " + version)
+		})
 		return
 	}
 
-	// Exit — file lock on exePath released immediately.  PowerShell takes over.
+	// Exit immediately — releases the file lock so cmd.exe can overwrite the exe.
 	os.Exit(0)
 }
 
@@ -214,10 +202,4 @@ func parseVer(v string) [3]int {
 		r[i], _ = strconv.Atoi(p)
 	}
 	return r
-}
-
-func showUpdateError(mw *walk.MainWindow, msg string) {
-	mw.Synchronize(func() {
-		walk.MsgBox(mw, "Update Error", msg, walk.MsgBoxIconError)
-	})
 }
