@@ -356,7 +356,7 @@ func (a *winApp) refreshHexTemplate() {
 		for i, id := range ids {
 			idStrs[i] = strconv.Itoa(id)
 		}
-		sb.WriteString(fmt.Sprintf("# Group %d (CC-IDs %d-%d)  activating: %s\n",
+		sb.WriteString(fmt.Sprintf("# Group %d (CC-IDs %d-%d)  activating: %s\r\n",
 			gn, minID, maxID, strings.Join(idStrs, ", ")))
 		var b [8]byte
 		for i := range b {
@@ -369,9 +369,9 @@ func (a *winApp) refreshHexTemplate() {
 		for i, v := range b {
 			hexParts[i] = fmt.Sprintf("%02X", v)
 		}
-		sb.WriteString(fmt.Sprintf("GROUP_%d: %s\n\n", gn, strings.Join(hexParts, " ")))
+		sb.WriteString(fmt.Sprintf("GROUP_%d: %s\r\n\r\n", gn, strings.Join(hexParts, " ")))
 	}
-	a.teHex.SetText(strings.TrimRight(sb.String(), "\n"))
+	a.teHex.SetText(strings.TrimRight(sb.String(), "\r\n"))
 }
 
 func (a *winApp) parseHexText() map[int][]byte {
@@ -474,11 +474,11 @@ func (a *winApp) loadCAFD() {
 		for i, v := range b {
 			hexParts[i] = fmt.Sprintf("%02X", v)
 		}
-		sb.WriteString(fmt.Sprintf("# Group %d (CC-IDs %d-%d)  activating: %s\n",
+		sb.WriteString(fmt.Sprintf("# Group %d (CC-IDs %d-%d)  activating: %s\r\n",
 			gn, minID, maxID, strings.Join(idStrs, ", ")))
-		sb.WriteString(fmt.Sprintf("GROUP_%d: %s\n\n", gn, strings.Join(hexParts, " ")))
+		sb.WriteString(fmt.Sprintf("GROUP_%d: %s\r\n\r\n", gn, strings.Join(hexParts, " ")))
 	}
-	a.teHex.SetText(strings.TrimRight(sb.String(), "\n"))
+	a.teHex.SetText(strings.TrimRight(sb.String(), "\r\n"))
 }
 
 func (a *winApp) calculate() {
