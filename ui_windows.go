@@ -229,7 +229,7 @@ func run() {
 											},
 											PushButton{
 												Text:      "Reset all to FF",
-												OnClicked: func() { wa.refreshHexTemplate() },
+												OnClicked: func() { wa.resetHexToFF() },
 											},
 										},
 									},
@@ -390,8 +390,9 @@ func (a *winApp) refreshHexTemplate() {
 		hl.SetSpacing(6)
 		row.SetLayout(hl)
 
-		lbl, _ := walk.NewLabel(row)
+		lbl, _ := walk.NewLineEdit(row)
 		lbl.SetText(fmt.Sprintf("CC_AKTIVIERUNG_%d:", gn))
+		lbl.SetReadOnly(true)
 		lbl.SetMinMaxSize(walk.Size{Width: 170}, walk.Size{Width: 170})
 
 		le, _ := walk.NewLineEdit(row)
@@ -475,8 +476,9 @@ func (a *winApp) calculate() {
 		hl.SetSpacing(6)
 		row.SetLayout(hl)
 
-		lbl, _ := walk.NewLabel(row)
+		lbl, _ := walk.NewLineEdit(row)
 		lbl.SetText(fmt.Sprintf("CC_AKTIVIERUNG_%d", gr.GroupNum))
+		lbl.SetReadOnly(true)
 		lbl.SetMinMaxSize(walk.Size{Width: 170}, walk.Size{Width: 170})
 
 		valLe, _ := walk.NewLineEdit(row)
@@ -493,6 +495,15 @@ func (a *winApp) calculate() {
 	}
 
 	a.resComp.SetSuspended(false)
+}
+
+// resetHexToFF resets every group's hex LineEdit back to all-FF, discarding
+// any values loaded from a CAFD/NCD file or typed by the user.
+func (a *winApp) resetHexToFF() {
+	ff := bytesToHexComma([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+	for _, le := range a.hexFields {
+		le.SetText(ff)
+	}
 }
 
 func (a *winApp) affectedGroups() []int {
