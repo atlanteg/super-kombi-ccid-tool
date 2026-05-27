@@ -505,17 +505,17 @@ func (a *winApp) calculate() {
 	results := calculateMask(initialStates, ids)
 	var sb strings.Builder
 	for _, gr := range results {
-		sb.WriteString(fmt.Sprintf("Group %d  (CC-IDs %d–%d)\n",
+		sb.WriteString(fmt.Sprintf("Group %d  (CC-IDs %d–%d)\r\n",
 			gr.GroupNum, (gr.GroupNum-1)*64, gr.GroupNum*64-1))
-		sb.WriteString("  Before: " + bytesToHex(gr.OriginalBytes) + "\n")
-		sb.WriteString("  After:  " + bytesToHex(gr.ModifiedBytes) + "\n")
+		sb.WriteString("  Before: " + bytesToHex(gr.OriginalBytes) + "\r\n")
+		sb.WriteString("  After:  " + bytesToHex(gr.ModifiedBytes) + "\r\n")
 		for _, idx := range gr.ModifiedIndices {
-			sb.WriteString(fmt.Sprintf("  Byte %d:  %02X  →  %02X\n",
+			sb.WriteString(fmt.Sprintf("  Byte %d:  %02X  ->  %02X\r\n",
 				idx+1, gr.OriginalBytes[idx], gr.ModifiedBytes[idx]))
 		}
-		sb.WriteString("\n")
+		sb.WriteString("\r\n")
 	}
-	a.teResults.SetText(strings.TrimRight(sb.String(), "\n"))
+	a.teResults.SetText(strings.TrimRight(sb.String(), "\r\n"))
 }
 
 func (a *winApp) copyResults() {
