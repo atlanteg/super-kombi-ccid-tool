@@ -91,52 +91,81 @@ var diagadrRe = regexp.MustCompile(`DIAGADR([0-9A-Fa-f]+)BMWMAC`)
 
 // ── VIN decode tables ────────────────────────────────────────────────────────
 
+// bmwModelEntry maps a BMW type key to its chassis platform codes and series name.
+// chassis is the base/sedan body; tourer is the estate/wagon variant (empty if N/A).
 type bmwModelEntry struct {
-	chassis string // platform code, e.g. "F34"
-	series  string // "3" (single digit) or "X5"/"M3" (named model)
+	chassis string // base chassis code, e.g. "G20" (sedan/coupé/standard body)
+	tourer  string // touring/estate variant chassis, e.g. "G21"; "" = not applicable
+	series  string // series label: single digit "3" or named "X5", "M3"
+}
+
+// bmwBodyInfo describes the body style and drivetrain encoded in VIN[4].
+type bmwBodyInfo struct {
+	touring bool // estate/wagon (Touring) body — selects the entry.tourer chassis code
+	xdrive  bool // BMW xDrive all-wheel drive
+}
+
+// bmwBodyCodes maps VIN[4] to body style and drivetrain.
+// Only non-default (sedan/RWD) combinations are listed;
+// any code absent from this map → standard sedan/coupé body, rear-wheel drive.
+var bmwBodyCodes = map[byte]bmwBodyInfo{
+	// AWD, standard body
+	'X': {false, true}, // xDrive sedan (all series, all generations)
+	// F-series Touring
+	'B': {true, false}, // F31 / F11 Touring, RWD
+	'D': {true, true},  // F31 / F11 Touring, xDrive
+	// G-series Touring, RWD
+	'E': {true, false}, // G21 / G31 / G61 Touring, RWD
+	// G-series Touring, xDrive
+	'N': {true, true}, // G21 / G31 Touring, xDrive
+	// M Touring
+	'F': {true, false}, // G81 M3 Touring, RWD
+	'G': {true, true},  // G81 M3 Touring, xDrive (Competition xDrive)
 }
 
 // bmwTypeKeys maps VIN[3] (BMW Baumuster / type key) to chassis + series.
 // Covers E-series (pre-2011), F-series (2011–2019), and G-series (2019–).
 var bmwTypeKeys = map[byte]bmwModelEntry{
 	// E-series
-	'1': {"E87", "1"},  // 1 Series E87/E81
-	'9': {"E90", "3"},  // 3 Series E90/E91
+	'1': {"E87", "", "1"},    // 1 Series E87/E81
+	'9': {"E90", "E91", "3"}, // 3 Series E90 sedan / E91 Touring
 	// F-series
-	'2': {"F20", "1"},  // 1 Series F20/F21
-	'3': {"F30", "3"},  // 3 Series F30 sedan / F31 touring
-	'4': {"F32", "4"},  // 4 Series F32 coupe / F33 cabrio / F36 gran coupe
-	'5': {"F10", "5"},  // 5 Series F10 sedan / F11 touring
-	'6': {"F12", "6"},  // 6 Series F12 cabrio / F13 coupe / F06 gran coupe
-	'7': {"F01", "7"},  // 7 Series F01 / F02 long wheelbase
-	'8': {"F34", "3"},  // 3 Series Gran Turismo F34
-	'A': {"F15", "X5"}, // X5 F15
-	'B': {"F16", "X6"}, // X6 F16
-	'C': {"F25", "X3"}, // X3 F25
-	'D': {"F26", "X4"}, // X4 F26
-	'E': {"F45", "2"},  // 2 Series Active Tourer F45 / Gran Tourer F46
-	'F': {"F48", "X1"}, // X1 F48
-	'G': {"F39", "X2"}, // X2 F39
+	'2': {"F20", "F21", "1"}, // 1 Series F20/F21
+	'3': {"F30", "F31", "3"}, // 3 Series F30 sedan / F31 Touring
+	'4': {"F32", "", "4"},    // 4 Series F32 coupé / F33 cabrio / F36 Gran Coupé
+	'5': {"F10", "F11", "5"}, // 5 Series F10 sedan / F11 Touring
+	'6': {"F12", "", "6"},    // 6 Series F12 cabrio / F13 coupé / F06 Gran Coupé
+	'7': {"F01", "", "7"},    // 7 Series F01 SWB / F02 LWB (shared type key)
+	'8': {"F34", "", "3"},    // 3 Series Gran Turismo F34
+	'A': {"F15", "", "X5"},   // X5 F15
+	'B': {"F16", "", "X6"},   // X6 F16
+	'C': {"F25", "", "X3"},   // X3 F25
+	'D': {"F26", "", "X4"},   // X4 F26
+	'E': {"F45", "", "2"},    // 2 Series Active Tourer F45 / Gran Tourer F46
+	'F': {"F48", "", "X1"},   // X1 F48
+	'G': {"F39", "", "X2"},   // X2 F39
 	// G-series
-	'H': {"G20", "3"},  // 3 Series G20 sedan / G21 touring
-	'J': {"G30", "5"},  // 5 Series G30 sedan / G31 touring
-	'K': {"G11", "7"},  // 7 Series G11 / G12 long wheelbase
-	'L': {"G01", "X3"}, // X3 G01
-	'M': {"G02", "X4"}, // X4 G02
-	'N': {"G05", "X5"}, // X5 G05
-	'P': {"G06", "X6"}, // X6 G06
-	'R': {"G07", "X7"}, // X7 G07
-	'S': {"G29", "Z4"}, // Z4 G29
-	'T': {"G42", "2"},  // 2 Series Coupe G42
-	'U': {"G80", "M3"}, // M3 G80 / M3 Touring G81
-	'V': {"G82", "M4"}, // M4 G82 coupe / G83 cabrio
-	'W': {"G26", "4"},  // 4 Series Gran Coupe G26
-	'X': {"G22", "4"},  // 4 Series G22 coupe / G23 cabrio
-	'Y': {"G15", "8"},  // 8 Series G15 coupe / G14 cabrio
-	'Z': {"G16", "8"},  // 8 Series Gran Coupe G16
+	'H': {"G20", "G21", "3"},  // 3 Series G20 sedan / G21 Touring
+	'J': {"G30", "G31", "5"},  // 5 Series G30 sedan / G31 Touring
+	'K': {"G11", "G12", "7"},  // 7 Series G11 SWB / G12 LWB
+	'L': {"G01", "", "X3"},    // X3 G01
+	'M': {"G02", "", "X4"},    // X4 G02
+	'N': {"G05", "", "X5"},    // X5 G05
+	'P': {"G06", "", "X6"},    // X6 G06
+	'R': {"G07", "", "X7"},    // X7 G07
+	'S': {"G29", "", "Z4"},    // Z4 G29
+	'T': {"G42", "", "2"},     // 2 Series Coupé G42
+	'U': {"G80", "G81", "M3"}, // M3 G80 sedan / G81 Touring
+	'V': {"G82", "G83", "M4"}, // M4 G82 coupé / G83 cabrio
+	'W': {"G26", "", "4"},     // 4 Series Gran Coupé G26
+	'X': {"G22", "G23", "4"},  // 4 Series G22 coupé / G23 cabrio
+	'Y': {"G15", "", "8"},     // 8 Series G15 coupé / G14 cabrio
+	'Z': {"G16", "", "8"},     // 8 Series Gran Coupé G16
 }
 
-// bmwEngineCodes maps VIN[5] to the engine/fuel displacement suffix.
+// bmwEngineCodes maps VIN[5] to the engine/displacement suffix appended to the model name.
+// This is a shared best-effort table for F- and G-series; some codes differ between
+// generations, and rare/market-specific variants may not be listed.
 var bmwEngineCodes = map[byte]string{
 	'0': "16i",
 	'1': "18i", '2': "20d", '3': "30d", '4': "35i",
@@ -153,11 +182,18 @@ var bmwEngineCodes = map[byte]string{
 // decodeVIN returns the chassis code and human-readable model label from a
 // 17-char BMW VIN.  Returns empty strings for unrecognised type keys.
 //
+// VIN positions used (0-indexed):
+//
+//	[3] type key (BMW Baumuster) → chassis platform
+//	[4] body style / drivetrain  → sedan vs Touring, RWD vs xDrive
+//	[5] engine code              → displacement/fuel suffix
+//
 // Examples:
 //
 //	"WBA8X51000CF40263" → chassis "F34", model "F34 320i xDrive"
-//	"WBA3A51090F123456" → chassis "F30", model "F30 320i"
-//	"WBSGG910X0CY12345" → chassis "G82", model "G82 M4"
+//	"WBA3B51090F123456" → chassis "F31", model "F31 320i"   (Touring)
+//	"WBAHE510X0H12345"  → chassis "G20", model "G20 318i xDrive"
+//	"WBAHE5100EH12345"  → chassis "G21", model "G21 318i"   (Touring)
 func decodeVIN(vin string) (chassis, model string) {
 	if len(vin) < 17 {
 		return "", ""
@@ -166,23 +202,31 @@ func decodeVIN(vin string) (chassis, model string) {
 	if !ok {
 		return "", ""
 	}
+
+	body := bmwBodyCodes[vin[4]] // zero value → sedan, RWD
+
+	// Refine chassis: use touring variant when the body code indicates an estate.
 	chassis = entry.chassis
+	if body.touring && entry.tourer != "" {
+		chassis = entry.tourer
+	}
+
 	eng := bmwEngineCodes[vin[5]] // "" if unknown
 
 	var drive string
-	if vin[4] == 'X' {
+	if body.xdrive {
 		drive = "xDrive"
 	}
 
 	if len(entry.series) == 1 {
-		// Single-digit series: "F34" + " " + "3" + "20i" = "F34 320i"
+		// Single-digit series: chassis + " " + series + eng → "G20 318i"
 		model = chassis + " " + entry.series
 		if eng != "" {
 			model += eng
 		}
 	} else {
-		// Named model (X1–X7, Z4, M3, M4, 8…): space-separated.
-		// M3/M4: engine tag is already "M", same as the series name — skip it.
+		// Named model (X1–X7, Z4, M3, M4, 8 Series…): space-separated.
+		// M3/M4: engine tag is already "M" — same as the series name, skip it.
 		model = chassis + " " + entry.series
 		if eng != "" && eng != "M" {
 			model += " " + eng
