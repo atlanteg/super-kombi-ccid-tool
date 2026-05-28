@@ -367,6 +367,15 @@ func (a *winApp) startAutoSearch() {
 				if info.Model != "" {
 					s += "  " + info.Model
 				}
+				if info.Body != "" {
+					s += "  " + info.Body
+				}
+				if info.Engine != "" {
+					s += "  " + info.Engine
+				}
+				if info.PowerKW > 0 {
+					s += fmt.Sprintf("  %d kW", info.PowerKW)
+				}
 				s += "  " + info.VIN
 				if info.Target != "" {
 					s += "  " + info.Target
