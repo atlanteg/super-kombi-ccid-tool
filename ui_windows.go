@@ -43,8 +43,10 @@ type winApp struct {
 	allEntries  []CCIDEntry
 	filtered    []CCIDEntry
 	selectedIDs map[int]bool
-	descMode    int            // 0=EnUS 1=EnUS_Long 2=DeDe 3=DeDe_Long 4=EnGB 5=EnGB_Long
-	cbDescMode  *walk.ComboBox
+	descMode        int            // 0=EnUS 1=EnUS_Long 2=DeDe 3=DeDe_Long 4=EnGB 5=EnGB_Long
+	cbDescMode      *walk.ComboBox // Tab 2 language selector
+	cbDescMode2     *walk.ComboBox // Tab 1 language selector (mirrors cbDescMode)
+	syncingDescMode bool           // re-entrancy guard for setDescMode
 }
 
 func run() {
@@ -152,6 +154,17 @@ func run() {
 										OnClicked: func() { wa.addAllFromCar() },
 									},
 									HSpacer{},
+									Label{Text: "View:"},
+									ComboBox{
+										AssignTo: &wa.cbDescMode2,
+										Model:    descModeNames,
+										Value:    descModeNames[4],
+										MaxSize:  Size{Width: 140},
+										OnCurrentIndexChanged: func() {
+											wa.setDescMode(wa.cbDescMode2.CurrentIndex())
+										},
+									},
+									HSpacer{},
 									PushButton{
 										Text: "→ Go to Select CC-IDs tab",
 										OnClicked: func() {
@@ -187,9 +200,7 @@ func run() {
 										Value:    descModeNames[4],
 										MaxSize:  Size{Width: 140},
 										OnCurrentIndexChanged: func() {
-											wa.descMode = wa.cbDescMode.CurrentIndex()
-											wa.refreshLists()
-											wa.refreshLiveList()
+											wa.setDescMode(wa.cbDescMode.CurrentIndex())
 										},
 									},
 									Label{AssignTo: &wa.lblStatus, Text: "0 selected"},
@@ -438,6 +449,25 @@ func (a *winApp) addAllFromCar() {
 	a.lblLive.SetText(fmt.Sprintf("All %d CC-IDs added (%d selected total)",
 		len(a.liveCCIDs), len(a.selectedIDs)))
 	a.tw.SetCurrentIndex(1) // jump to Select tab
+}
+
+// setDescMode changes the active language/mode and keeps both ComboBoxes in sync.
+// Safe to call from either ComboBox's OnCurrentIndexChanged handler.
+func (a *winApp) setDescMode(idx int) {
+	if a.syncingDescMode {
+		return
+	}
+	a.syncingDescMode = true
+	a.descMode = idx
+	if a.cbDescMode != nil {
+		a.cbDescMode.SetCurrentIndex(idx)
+	}
+	if a.cbDescMode2 != nil {
+		a.cbDescMode2.SetCurrentIndex(idx)
+	}
+	a.syncingDescMode = false
+	a.refreshLists()
+	a.refreshLiveList()
 }
 
 // refreshLiveList redraws the live ListBox with updated checkmarks.
