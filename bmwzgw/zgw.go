@@ -189,6 +189,38 @@ var chassisPlatform = map[string]string{
 	"G84": "G070", "G90": "G070", "G99": "G070",
 }
 
+// VIN[10] model-year character encoding (I / O / Q are omitted):
+//
+//	A=2010 B=2011 C=2012 D=2013 E=2014 F=2015 G=2016
+//	H=2017 J=2018 K=2019 L=2020 M=2021 N=2022 P=2023 R=2024
+//
+// BMW reuses VIN[3] type-key letters across generations.  The two tables below
+// handle disambiguation:
+//
+//   gseriesIntroMY  — maps a type-key letter to the VIN[10] character at which
+//                     G-series production for that key began.  Only populated
+//                     for keys that were provably used for a different F-series
+//                     model before the G-series took over.
+//
+//   fseriesAltKeys  — the F-series meaning of those reused keys.
+//
+// When VIN[10] < gseriesIntroMY[key], decodeVIN uses fseriesAltKeys instead
+// of bmwTypeKeys.  Keys with no confirmed F-series predecessor are left out of
+// both tables so they fall through to bmwTypeKeys unmodified.
+var gseriesIntroMY = map[byte]byte{
+	// 'L': G01 X3 from MY2018 ('J'); before that it was the 6 Series F13 Coupé.
+	'L': 'J',
+	// Add further confirmed reuse cases here as more VINs are analysed, e.g.:
+	//   'K': 'G',  // G11 7-series from MY2016 — predecessor TBD
+	//   'J': 'H',  // G30 5-series from MY2017 — predecessor TBD
+}
+
+var fseriesAltKeys = map[byte]bmwModelEntry{
+	// 6 Series Coupé F13 (predecessor of G01 on key 'L').
+	// The 6 Convertible F12 was on a different type key; Tourer field unused.
+	'L': {"F13", "", "6", false},
+}
+
 // bmwTypeKeys maps VIN[3] (BMW Baumuster / type key) to chassis + series.
 // Covers E-series (pre-2011), F-series (2011–2019), and G-series (2019–).
 var bmwTypeKeys = map[byte]bmwModelEntry{
@@ -265,7 +297,20 @@ func decodeVIN(vin string) (chassis, model, engine, body string, powerKW int) {
 	if len(vin) < 17 {
 		return
 	}
-	entry, ok := bmwTypeKeys[vin[3]]
+
+	// Resolve type key — accounting for BMW reusing the same VIN[3] letter
+	// across generations.  VIN[10] carries the model-year character and lets
+	// us determine which generation the car belongs to.
+	typeKey := vin[3]
+	myChar := vin[10]
+	var entry bmwModelEntry
+	var ok bool
+	if introMY, reused := gseriesIntroMY[typeKey]; reused && myChar < introMY {
+		// VIN predates G-series introduction for this key → use F-series entry.
+		entry, ok = fseriesAltKeys[typeKey]
+	} else {
+		entry, ok = bmwTypeKeys[typeKey]
+	}
 	if !ok {
 		return
 	}
