@@ -63,6 +63,7 @@ func run() {
 	if version != "dev" {
 		title += " " + version
 	}
+	title += " — by NBTboost creators © Atlanteg"
 
 	if err := (MainWindow{
 		AssignTo: &wa.mw,
