@@ -124,6 +124,71 @@ var bmwBodyCodes = map[byte]bmwBodyInfo{
 	'G': {true, true},  // G81 M3 Touring, xDrive (Competition xDrive)
 }
 
+// chassisPlatform maps chassis code (as returned by decodeVIN) to the BMW ISTA
+// software platform identifier.  Used to display the diagnostic platform name
+// instead of the raw DIAGADR-derived target address.
+//
+// Sources: ISTA VehicleInfo → Series mappings (bimmer-tool DB, screenshots).
+// Platform families:
+//   F001  — 7 Series F01/F02 (2008–2015)
+//   F010  — 5 Series F10/F11, 6 Series F12/F13 (2010–2017)
+//   F020  — 1/2/3/4 Series F20–F36 (2011–2019)
+//   F025  — X3 F25, X4 F26, X5 F15, X6 F16 (2011–2019)
+//   F056  — UKL FWD: X1 F48, X2 F39, 2AT F45/F46 (2014–2022)
+//   S15A  — CLAR gen 1: 5 Series G30, 7 Series G11/G12, X3 G01, X4 G02
+//   S18A  — CLAR gen 2: 3/4 Series G20–G26, 8 Series G14–G16,
+//            X5 G05, X6 G06, X7 G07, Z4 G29, 2 Series G42, M2–M4/M3
+//   G045  — Electric: iX G045/G046/G048
+//   G070  — New gen: 5 Series G60, 7 Series G70, M5 G84/G90
+var chassisPlatform = map[string]string{
+	// ── F-series ──────────────────────────────────────────────────────────────
+	// platform F001: 7 Series F01/F02, 5GT F07
+	"F01": "F001",
+	// platform F010: 5 Series F10/F11, 6 Series F12/F13/F06
+	"F10": "F010", "F11": "F010", "F12": "F010",
+	// platform F025: X5 F15, X6 F16, X3 F25, X4 F26
+	"F15": "F025", "F16": "F025", "F25": "F025", "F26": "F025",
+	// platform F020: 1/2/3/4 Series (all F2x/F3x mainstream)
+	"F20": "F020", "F21": "F020",
+	"F22": "F020", "F23": "F020",
+	"F30": "F020", "F31": "F020", "F32": "F020", "F33": "F020",
+	"F34": "F020", "F35": "F020", "F36": "F020",
+	// platform F056: UKL FWD — X1 F48, X2 F39, 2 Active/Gran Tourer F45/F46
+	"F39": "F056", "F45": "F056", "F46": "F056",
+	"F47": "F056", "F48": "F056", "F49": "F056",
+	// ── G-series — CLAR gen 1 (S15A) ─────────────────────────────────────────
+	// 5 Series G30/G31, 6 GT G32, 7 Series G11/G12, X3 G01, X4 G02
+	"G01": "S15A", "G02": "S15A",
+	"G11": "S15A", "G12": "S15A",
+	"G30": "S15A", "G31": "S15A", "G32": "S15A",
+	// ── G-series — CLAR gen 1 extended (S15C) ────────────────────────────────
+	// 5 Series long-wheelbase G38, X3M G08 (China/specific markets)
+	"G38": "S15C",
+	// ── G-series — CLAR gen 2 (S18A) ─────────────────────────────────────────
+	// 3 Series G20/G21, 4 Series G22/G23/G26, 2 Series G42
+	"G20": "S18A", "G21": "S18A",
+	"G22": "S18A", "G23": "S18A", "G24": "S18A", "G26": "S18A",
+	"G42": "S18A",
+	// X3 G09 (M), X5 G05, X6 G06, X7 G07
+	"G05": "S18A", "G06": "S18A", "G07": "S18A", "G09": "S18A",
+	// 8 Series G14/G15/G16, Z4 G29
+	"G14": "S18A", "G15": "S18A", "G16": "S18A",
+	"G29": "S18A",
+	// M2 G87, M3 G80/G81, M4 G82/G83
+	"G80": "S18A", "G81": "S18A",
+	"G82": "S18A", "G83": "S18A",
+	"G87": "S18A",
+	// ── G-series — new generation electric (G045) ─────────────────────────────
+	// iX G045/G046/G048
+	"G45": "G045", "G46": "G045", "G48": "G045",
+	// ── G-series — new generation ICE (G070) ──────────────────────────────────
+	// 5 Series G60/G61, 7 Series G70/G71, M5 G84/G90/G99
+	"G60": "G070", "G61": "G070",
+	"G68": "G070", "G70": "G070", "G71": "G070",
+	"G72": "G070", "G73": "G070",
+	"G84": "G070", "G90": "G070", "G99": "G070",
+}
+
 // bmwTypeKeys maps VIN[3] (BMW Baumuster / type key) to chassis + series.
 // Covers E-series (pre-2011), F-series (2011–2019), and G-series (2019–).
 var bmwTypeKeys = map[byte]bmwModelEntry{
@@ -292,12 +357,13 @@ func diagadrToTarget(hexStr string) string {
 // When VIN != "" all fields are populated (Model/Target may be empty if the
 // VIN type key or DIAGADR is not recognised).
 type Info struct {
-	IP      string // ZGW or interface IP, e.g. "169.254.138.176"
-	MAC     string // ZGW MAC address, e.g. "48:C5:8D:90:51:5C"; empty until ZGW responds
-	VIN     string // 17-char VIN, e.g. "WBA8X51000CF40263"; empty until ZGW responds
-	Model   string // decoded model label, e.g. "G30 530i xDrive"; empty if not recognised
-	Chassis string // chassis code, e.g. "G30"; empty if not recognised
-	Target  string // ISTA target, e.g. "F020"; empty if DIAGADR absent
+	IP       string // ZGW or interface IP, e.g. "169.254.138.176"
+	MAC      string // ZGW MAC address, e.g. "48:C5:8D:90:51:5C"; empty until ZGW responds
+	VIN      string // 17-char VIN, e.g. "WBA8X51000CF40263"; empty until ZGW responds
+	Model    string // decoded model label, e.g. "G30 530i xDrive"; empty if not recognised
+	Chassis  string // chassis code, e.g. "G30"; empty if not recognised
+	Target   string // ISTA ECU target address, e.g. "F020" (from DIAGADR×2); empty if absent
+	Platform string // ISTA software platform, e.g. "S15A", "S18A", "F020"; empty if unknown
 	// Fields below are populated only when a match is found in the type database:
 	Engine  string // BMW engine code, e.g. "B57D30O0"; empty if not in DB
 	PowerKW int    // engine output in kW, e.g. 195; 0 if not in DB
@@ -392,21 +458,23 @@ func Run(ctx context.Context, skipIfaceName string, onChange func(*Info)) {
 		var engine, body string
 		var powerKW int
 		chassis, model, engine, body, powerKW = decodeVIN(vin)
+		platform := chassisPlatform[chassis]
 
-		log.Printf("bmwzgw: ZGW at %s  VIN=%s  target=%s  model=%s", addr.IP, vin, target, model)
+		log.Printf("bmwzgw: ZGW at %s  VIN=%s  target=%s  platform=%s  model=%s", addr.IP, vin, target, platform, model)
 		mu.Lock()
 		lastSeen = time.Now()
 		mu.Unlock()
 		notify(&Info{
-			IP:      addr.IP.String(),
-			MAC:     mac,
-			VIN:     vin,
-			Model:   model,
-			Chassis: chassis,
-			Target:  target,
-			Engine:  engine,
-			PowerKW: powerKW,
-			Body:    body,
+			IP:       addr.IP.String(),
+			MAC:      mac,
+			VIN:      vin,
+			Model:    model,
+			Chassis:  chassis,
+			Target:   target,
+			Platform: platform,
+			Engine:   engine,
+			PowerKW:  powerKW,
+			Body:     body,
 		})
 	}
 
@@ -526,15 +594,16 @@ func Discover(localIP string) *Info {
 		var powerKW int
 		chassis, model, engine, body, powerKW = decodeVIN(vin)
 		return &Info{
-			IP:      remoteAddr.IP.String(),
-			MAC:     mac,
-			VIN:     vin,
-			Model:   model,
-			Chassis: chassis,
-			Target:  target,
-			Engine:  engine,
-			PowerKW: powerKW,
-			Body:    body,
+			IP:       remoteAddr.IP.String(),
+			MAC:      mac,
+			VIN:      vin,
+			Model:    model,
+			Chassis:  chassis,
+			Target:   target,
+			Platform: chassisPlatform[chassis],
+			Engine:   engine,
+			PowerKW:  powerKW,
+			Body:     body,
 		}
 	}
 }
@@ -674,5 +743,5 @@ func infoEqual(a, b *Info) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	return a.IP == b.IP && a.VIN == b.VIN && a.Target == b.Target && a.Model == b.Model
+	return a.IP == b.IP && a.VIN == b.VIN && a.Target == b.Target && a.Model == b.Model && a.Platform == b.Platform
 }

@@ -377,8 +377,8 @@ func (a *winApp) startAutoSearch() {
 					s += fmt.Sprintf("  %d kW", info.PowerKW)
 				}
 				s += "  " + info.VIN
-				if info.Target != "" {
-					s += "  " + info.Target
+				if info.Platform != "" {
+					s += "  " + info.Platform
 				}
 				a.leZGW.SetText(s)
 			}
