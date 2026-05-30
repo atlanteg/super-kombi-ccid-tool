@@ -109,11 +109,18 @@ func checkAndUpdate(mw *walk.MainWindow) {
 	// paths get mangled (leading to "network path not found" errors).
 	// A batch file avoids that entirely: its content is written as plain bytes,
 	// bypassing the command-line quoting layer completely.
+	//
+	// IMPORTANT: cmd.exe reads .bat files using the system ANSI code page
+	// (e.g. Windows-1251 on Russian Windows), NOT UTF-8.  Any non-ASCII bytes
+	// written as UTF-8 appear as mojibake, which breaks paths containing
+	// Cyrillic characters (e.g. "C:\Users\Иван\AppData\...").
+	// Fix: convert paths to their 8.3 short form via GetShortPathName — the
+	// short path is always pure ASCII and works regardless of the active code page.
 	batPath := filepath.Join(os.TempDir(), "kombi-ccid-update.bat")
 	batContent := "@echo off\r\n" +
 		"ping 127.0.0.1 -n 4 >NUL\r\n" +
-		"copy /y \"" + tmpPath + "\" \"" + exePath + "\"\r\n" +
-		"start \"\" \"" + exePath + "\"\r\n" +
+		"copy /y \"" + toShortPath(tmpPath) + "\" \"" + toShortPath(exePath) + "\"\r\n" +
+		"start \"\" \"" + toShortPath(exePath) + "\"\r\n" +
 		"del \"%~f0\"\r\n" // self-delete the batch file when done
 	if werr := os.WriteFile(batPath, []byte(batContent), 0644); werr != nil {
 		mw.Synchronize(func() {
@@ -215,4 +222,31 @@ func parseVer(v string) [3]int {
 		r[i], _ = strconv.Atoi(p)
 	}
 	return r
+}
+
+// toShortPath converts a Windows file path to its 8.3 short form via
+// GetShortPathName.  The short path is guaranteed to be pure ASCII, which
+// makes it safe to embed in a .bat file — cmd.exe reads batch files using
+// the system ANSI code page, so paths with Cyrillic (or any non-ASCII)
+// characters written as UTF-8 would appear as mojibake.
+//
+// Falls back to the original path if the API call fails (e.g. on drives
+// where 8.3 name generation has been disabled via NtfsDisable8dot3NameCreation).
+func toShortPath(longpath string) string {
+	// Convert Go string (UTF-8) → UTF-16 pointer for the Windows API.
+	p16, err := syscall.UTF16PtrFromString(longpath)
+	if err != nil {
+		return longpath
+	}
+	// First call: pass nil buffer to obtain the required buffer length.
+	n, _ := syscall.GetShortPathName(p16, nil, 0)
+	if n == 0 {
+		return longpath // API failed — use original path
+	}
+	buf := make([]uint16, n)
+	n2, err := syscall.GetShortPathName(p16, &buf[0], n)
+	if err != nil || n2 == 0 {
+		return longpath
+	}
+	return syscall.UTF16ToString(buf[:n2])
 }
